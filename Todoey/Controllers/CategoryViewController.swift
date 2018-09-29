@@ -2,14 +2,15 @@
 //  CategoryViewController.swift
 //  Todoey
 //
-//  Created by Studio One on 2018/09/25.
+//  Created by Nic le Roux on 2018/09/25.
 //  Copyright © 2018 Nic le Roux. All rights reserved.
 //
 
 import UIKit
 import RealmSwift
+import ChameleonFramework
 
-class CategoryViewController: UITableViewController {
+class CategoryViewController: SwipeTableViewController {
     
     let realm = try! Realm()
     
@@ -17,11 +18,10 @@ class CategoryViewController: UITableViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        print(Realm.Configuration.defaultConfiguration.fileURL)
         loadData()
     }
     
-    //Mark: - Add Category
+    //MARK: - Add Category
     @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
         var textField = UITextField()
         
@@ -30,7 +30,7 @@ class CategoryViewController: UITableViewController {
         let action = UIAlertAction(title: "Add", style: .default) { (action) in
             let newCategory = Category()
             newCategory.name = textField.text!
-
+            newCategory.cellColour = UIColor.randomFlat.hexValue()
             self.save(category: newCategory)
         }
         
@@ -44,11 +44,13 @@ class CategoryViewController: UITableViewController {
         present(alert, animated: true, completion: nil)
     }
     
-    //Mark: - TableView Datasource Methods
+    //MARK: - TableView Datasource Methods
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "categoryCell", for: indexPath)
-        
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
+
         cell.textLabel?.text = categoryArray?[indexPath.row].name ?? "No Categories Added Yet"
+        cell.backgroundColor = UIColor(hexString: categoryArray?[indexPath.row].cellColour ?? "28AAC0")
+        cell.textLabel?.textColor = ContrastColorOf(cell.backgroundColor!, returnFlat: true)
         
         return cell
     }
@@ -57,9 +59,8 @@ class CategoryViewController: UITableViewController {
         return categoryArray?.count ?? 1
     }
     
-    //Mark: - TableView Delegates Methods
+    //MARK: - TableView Delegates Methods
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        print("row \(indexPath.row) selected")
         performSegue(withIdentifier: "goToItems", sender: self)
         tableView.deselectRow(at: indexPath, animated: true)
     }
@@ -72,7 +73,7 @@ class CategoryViewController: UITableViewController {
         
     }
     
-    //Mark: - Data Manipulation Methods
+    //MARK: - Data Manipulation Methods
     func save(category: Category) {
         do {
             try realm.write {
@@ -87,5 +88,17 @@ class CategoryViewController: UITableViewController {
     func loadData() {
         categoryArray = realm.objects(Category.self)
         tableView.reloadData()
+    }
+    
+    override func updateModel(at indexPath: IndexPath) {
+        if let categoryForDeletion = self.categoryArray?[indexPath.row] {
+            do {
+                try self.realm.write {
+                    self.realm.delete(categoryForDeletion)
+                }
+            } catch {
+                print ("Error Deleting Category, \(error)")
+            }
+        }
     }
 }
